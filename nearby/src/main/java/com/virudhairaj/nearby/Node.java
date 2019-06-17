@@ -68,12 +68,14 @@ public class Node {
         return endpointId != null ? endpointId : "";
     }
 
-    public void setEndpointId(String endpointId) {
+    public Node setEndpointId(String endpointId) {
         this.endpointId = endpointId;
+        return this;
     }
 
-    public void setConnected(boolean connected) {
+    public Node setConnected(boolean connected) {
         this.connected = connected;
+        return this;
     }
 
     public boolean isConnected() {

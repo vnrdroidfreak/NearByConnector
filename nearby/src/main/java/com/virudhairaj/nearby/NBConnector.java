@@ -1,9 +1,12 @@
 package com.virudhairaj.nearby;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.util.SimpleArrayMap;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.google.android.gms.nearby.Nearby;
@@ -21,10 +24,8 @@ import com.google.android.gms.nearby.connection.PayloadCallback;
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.Strategy;
 import com.google.android.gms.tasks.OnCanceledListener;
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -34,12 +35,11 @@ public abstract class NBConnector<NODE extends Node> {
     private static final String TAG = NBConnector.class.getSimpleName();
     private final ConnectionsClient connection;
     private final NODE node;
-    private NBCallback<NODE> callback;
     public static boolean debuggable = true;
 
     private final SimpleArrayMap<Long, Payload> incomingPayloads = new SimpleArrayMap<>();
-    private final SimpleArrayMap<Long, Payload> completedFilePayloads = new SimpleArrayMap<>();
-    private final SimpleArrayMap<Long, String> filePayloadFilenames = new SimpleArrayMap<>();
+    private final SimpleArrayMap<Long, Payload> outgoingPayloads = new SimpleArrayMap<>();
+    private final SimpleArrayMap<Long, String> fileNamePayloads = new SimpleArrayMap<>();
 
     /**
      * code for nodes management
@@ -52,7 +52,7 @@ public abstract class NBConnector<NODE extends Node> {
             connected.remove(node.getEndpointId()); //first remove from connected list if exist
             nearBy.put(node.getEndpointId(), node);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            if (debuggable) Log.e(TAG, e.getMessage());
         }
     }
 
@@ -61,7 +61,7 @@ public abstract class NBConnector<NODE extends Node> {
             nearBy.remove(node.getEndpointId());
             connected.put(node.getEndpointId(), node);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            if (debuggable) Log.e(TAG, e.getMessage());
         }
     }
 
@@ -71,7 +71,7 @@ public abstract class NBConnector<NODE extends Node> {
             if (node != null)
                 connected.put(endpointId, node);
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
+            if (debuggable) Log.e(TAG, e.getMessage());
         }
     }
 
@@ -107,8 +107,103 @@ public abstract class NBConnector<NODE extends Node> {
         return nearBy.get(endpointId);
     }
 
+    private static final String[] PERMISSIONS =
+            new String[]{
+                    Manifest.permission.BLUETOOTH,
+                    Manifest.permission.BLUETOOTH_ADMIN,
+                    Manifest.permission.ACCESS_WIFI_STATE,
+                    Manifest.permission.CHANGE_WIFI_STATE,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            };
+
     @NonNull
     public abstract NODE parseNode(@NonNull String endpointId, @NonNull String json);
+
+
+    //------------callback methods
+
+    public void onStopDiscovery() {
+    }
+
+    public void onStopAdvertising() {
+    }
+
+    public void onAdvertiseCanceled() {
+    }
+
+    public void onAdvertiseSuccess() {
+    }
+
+    public void onAdvertiseFailed(final @NonNull Exception e) {
+    }
+
+    public void onDiscoveryCanceled() {
+    }
+
+    public void onDiscoverySuccess() {
+    }
+
+    public void onDiscoveryFailed(final @NonNull Exception e) {
+    }
+
+    public void onConnectionInitiated(final @NonNull NODE node, final @NonNull ConnectionInfo connectionInfo) {
+    }
+
+    public void onConnectionSuccess(final @NonNull NODE node, final @NonNull ConnectionResolution result) {
+    }
+
+    public void onConnectionRejected(final @NonNull NODE node, final @NonNull ConnectionResolution result) {
+    }
+
+    public void onConnectionFailed(final @NonNull NODE node, final @NonNull ConnectionResolution result) {
+    }
+
+    public void onDisconnected(final @NonNull NODE node) {
+    }
+
+    public void onDeviceFound(final @NonNull NODE node, final @NonNull DiscoveredEndpointInfo info) {
+    }
+
+    public void onDeviceLost(final @NonNull NODE node) {
+    }
+
+    public void onMessageReceived(final @NonNull NODE from, final @NonNull Message message) {
+    }
+
+    public void onIncomingFile(final @NonNull NODE node, final @NonNull Payload payload, final String fileName) {
+    }
+
+    public void onFileTransfer(final @NonNull NODE node, boolean isIncoming, final @NonNull Payload payload, final String fileName) {
+    }
+
+    public void onFileTransferCanceled(final @NonNull NODE node, boolean isIncoming, final @NonNull Payload payload, final String fileName) {
+    }
+
+    public void onFileTransferFailed(final @NonNull NODE node, boolean isIncoming, final @NonNull Payload payload, final String fileName) {
+    }
+
+    public void onFileReceived(final @NonNull NODE node, final @NonNull File file) {
+    }
+
+
+    //end of callback methods--------------------------------------------------
+
+
+    private String getRejectedRequiredPermissions(@NonNull Context context) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < PERMISSIONS.length; i++) {
+            final String permission = PERMISSIONS[i];
+            if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                sb.append(permission);
+                if (i != 0 && PERMISSIONS.length > 1 && i < PERMISSIONS.length - 1) {
+                    sb.append("\n");
+                }
+            }
+        }
+        return sb.toString();
+    }
 
     public NBConnector(@NonNull final ConnectionsClient connection, @NonNull final NODE myNode) {
         this.connection = connection;
@@ -120,108 +215,107 @@ public abstract class NBConnector<NODE extends Node> {
     public NBConnector(@NonNull final Context context, @NonNull final NODE myNode) {
         if (context == null) throw new RuntimeException("Context is null");
         if (myNode == null) throw new RuntimeException("myNode is null");
+        String rejectedPermissions = getRejectedRequiredPermissions(context);
+        if (!TextUtils.isEmpty(rejectedPermissions))
+            throw new RuntimeException("Required permissions not granted " + rejectedPermissions);
         this.connection = Nearby.getConnectionsClient(context);
         this.node = myNode;
         connected = new HashMap<>();
         nearBy = new HashMap<>();
     }
 
-    public NBConnector setCallback(@Nullable final NBCallback<NODE> callback) {
-        this.callback = callback;
-        return this;
-    }
-
-    private void processFilePayload(long payloadId) {
-        // BYTES and FILE could be received in any order, so we call when either the BYTES or the FILE
-        // payload is completely received. The file payload is considered complete only when both have
-        // been received.
-        Payload filePayload = completedFilePayloads.get(payloadId);
-        String filename = filePayloadFilenames.get(payloadId);
-        if (filePayload != null && filename != null) {
-            completedFilePayloads.remove(payloadId);
-            filePayloadFilenames.remove(payloadId);
-
-            // Get the received file (which will be in the Downloads folder)
-            File payloadFile = filePayload.asFile().asJavaFile();
-
-            // Rename the file.
-            payloadFile.renameTo(new File(payloadFile.getParentFile(), filename));
-        }
-    }
-
-    private long addPayloadFilename(String payloadFilenameMessage) {
-        String[] parts = payloadFilenameMessage.split(":");
-        long payloadId = Long.parseLong(parts[0]);
-        String filename = parts[1];
-        filePayloadFilenames.put(payloadId, filename);
-        return payloadId;
-    }
 
     private final PayloadCallback payloadCallback =
             new PayloadCallback() {
                 @Override
                 public void onPayloadReceived(String endpointId, Payload payload) {
                     final NODE node = connected.get(endpointId);
-                    Log.e(TAG, "onPayloadReceived from " + node);
+                    if (debuggable) Log.d(TAG, "onPayloadReceived from " + node);
                     incomingPayloads.put(payload.getId(), payload);
 
                     final String content = new String(payload.asBytes(), StandardCharsets.UTF_8);
                     if (payload.getType() == Payload.Type.BYTES && content.contains(MsgType.fileMeta.name())) {
                         MsgFileMeta meta = MsgFileMeta.fromJsonStr(content);
-                        Log.e(TAG, "onIncomingFile: from " + node + " fileName: " + meta.content);
-                        if (callback != null && node != null)
-                            callback.onIncomingFile(node, payload, meta.content);
+                        if (debuggable)
+                            Log.d(TAG, "onIncomingFile: from " + node + " fileName: " + meta.content);
+                        if (node != null)
+                            onIncomingFile(node, payload, meta.content);
                     }
                 }
 
                 @Override
                 public void onPayloadTransferUpdate(String endpointId, PayloadTransferUpdate update) {
-                    final Payload payload = incomingPayloads.get(update.getPayloadId());
-                    if (payload == null) {
-                        Log.e(TAG, "onPayloadTransferUpdate: payload not found ");
+                    boolean isIncoming = incomingPayloads.containsKey(update.getPayloadId());
+                    boolean isOutgoing = outgoingPayloads.containsKey(update.getPayloadId());
+
+                    if (!isIncoming && !isOutgoing) {
+                        if (debuggable)
+                            Log.i(TAG, "onPayloadTransferUpdate: payload " + update.getPayloadId() + " not found in local map");
                         return;
                     }
+
+                    if (!connected.containsKey(endpointId)) {
+                        if (debuggable)
+                            Log.i(TAG, "onPayloadTransferUpdate: endpoint " + endpointId + " not found in connected list");
+                        return;
+                    }
+
+
+                    final Payload payload = isIncoming ? incomingPayloads.get(update.getPayloadId()) : outgoingPayloads.get(update.getPayloadId());
                     final NODE node = connected.get(endpointId);
 
-                    if (node == null) {
-                        Log.e(TAG, "onPayloadTransferUpdate: endpoint not found in connected list");
-                        return;
-                    }
+                    switch (payload.getType()) {
+                        case Payload.Type.BYTES: {
+                            if (update.getStatus() == PayloadTransferUpdate.Status.SUCCESS) {
+                                final String content = new String(payload.asBytes(), StandardCharsets.UTF_8);
 
-                    if (payload.getType() == Payload.Type.BYTES && update.getStatus() == PayloadTransferUpdate.Status.SUCCESS) {
-                        final String content = new String(payload.asBytes(), StandardCharsets.UTF_8);
-                        incomingPayloads.remove(payload);
-                        if (content.contains(MsgType.fileMeta.name())) {
-                            Log.e(TAG, "onFileMetaReceived: from : " + node + " content: " + content);
-                            MsgFileMeta meta = MsgFileMeta.fromJsonStr(content);
-                            filePayloadFilenames.put(payload.getId(), meta.content);
-                        } else {
-                            Log.e(TAG, "onMessageReceived: from : " + node + " content: " + content);
-                            if (callback != null) callback.onMessageReceived(node, content);
+                                if (isIncoming) incomingPayloads.remove(payload);
+                                else outgoingPayloads.remove(payload);
 
+                                if (isIncoming && content.contains(MsgType.fileMeta.name())) {
+                                    if (debuggable)
+                                        Log.d(TAG, "onFileMetaReceived: from : " + node + " content: " + content);
+                                    MsgFileMeta meta = MsgFileMeta.fromJsonStr(content);
+                                    fileNamePayloads.put(payload.getId(), meta.content);
+                                } else if (isIncoming) {
+                                    if (debuggable)
+                                        Log.d(TAG, "onMessageReceived: from : " + node + " content: " + content);
+
+                                    onMessageReceived(node, new Message(content) {
+                                    });
+                                } else {
+                                    //out going messages
+                                }
+                            }
                         }
-                    } else if (payload.getType() == Payload.Type.FILE) {
-                        if (update.getStatus() == PayloadTransferUpdate.Status.IN_PROGRESS) {
-                            if (callback != null)
-                                callback.onFileTransfer(node, payload, filePayloadFilenames.get(payload.getId()));
-                        } else if (update.getStatus() == PayloadTransferUpdate.Status.SUCCESS) {
-                            final Payload completed = incomingPayloads.remove(payload.getId());
-                            filePayloadFilenames.remove(payload.getId());
-                            if (callback != null)
-                                callback.onFileReceived(node, payload.asFile().asJavaFile());
-                        } else if (update.getStatus() == PayloadTransferUpdate.Status.CANCELED) {
-                            final Payload canceled = incomingPayloads.remove(payload.getId());
-                            final String fileName = filePayloadFilenames.remove(payload.getId());
-                            if (callback != null && canceled!=null)
-                                callback.onFileTransferCanceled(node, canceled, fileName);
-                        } else if (update.getStatus() == PayloadTransferUpdate.Status.FAILURE) {
-                            incomingPayloads.remove(payload.getId());
-                            final String fileName = filePayloadFilenames.remove(payload.getId());
-                            if (callback != null )
-                                callback.onFileTransferFailed(node, payload, fileName);
+                        break;
+
+                        case Payload.Type.FILE: {
+                            if (update.getStatus() == PayloadTransferUpdate.Status.IN_PROGRESS) {
+
+                                onFileTransfer(node, isIncoming, payload, fileNamePayloads.get(payload.getId()));
+                            } else if (update.getStatus() == PayloadTransferUpdate.Status.SUCCESS) {
+                                final Payload completed = isIncoming ? incomingPayloads.remove(payload.getId()) : outgoingPayloads.remove(payload.getId());
+                                fileNamePayloads.remove(payload.getId());
+
+                                onFileReceived(node, payload.asFile().asJavaFile());
+                            } else if (update.getStatus() == PayloadTransferUpdate.Status.CANCELED) {
+                                final Payload canceled = isIncoming ? incomingPayloads.remove(payload.getId()) : outgoingPayloads.remove(payload.getId());
+                                final String fileName = fileNamePayloads.remove(payload.getId());
+                                if (canceled != null)
+                                    onFileTransferCanceled(node, isIncoming, canceled, fileName);
+                            } else if (update.getStatus() == PayloadTransferUpdate.Status.FAILURE) {
+                                final Payload failed = isIncoming ? incomingPayloads.remove(payload.getId()) : outgoingPayloads.remove(payload.getId());
+                                final String fileName = fileNamePayloads.remove(payload.getId());
+                                if (failed != null)
+                                    onFileTransferFailed(node, isIncoming, failed, fileName);
+                            }
                         }
-                    } else if (payload.getType() == Payload.Type.STREAM) {
-                        // TODO: 6/16/2019 need to handle stream
+                        break;
+                        case Payload.Type.STREAM: {
+                            // TODO: 6/16/2019 need to handle stream
+                        }
+                        break;
                     }
                 }
             };
@@ -236,7 +330,7 @@ public abstract class NBConnector<NODE extends Node> {
 
                     if (debuggable)
                         Log.d(TAG, "onConnectionInitiated " + endpointId + " " + connectionInfo.getEndpointName() + " waiting for approval (accept / reject)");
-                    callback.onConnectionInitiated(node, connectionInfo);
+                    NBConnector.this.onConnectionInitiated(node, connectionInfo);
                 }
 
                 @Override
@@ -248,20 +342,20 @@ public abstract class NBConnector<NODE extends Node> {
 
                             if (debuggable)
                                 Log.d(TAG, "onConnectionSuccess  connected with: " + endpointId);
-                            if (callback != null)
-                                callback.onConnectionSuccess(findOnlineDeviceById(endpointId), result);
+
+                            NBConnector.this.onConnectionSuccess(findOnlineDeviceById(endpointId), result);
                             break;
                         case ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED:
-                            // The connection was rejected by one or both sides.
                             if (debuggable)
                                 Log.d(TAG, "onConnectionRejected  " + endpointId + " rejected connection request");
-                            if (callback != null)
-                                callback.onConnectionRejected(findAvailableDeviceById(endpointId), result);
+
+                            NBConnector.this.onConnectionRejected(findAvailableDeviceById(endpointId), result);
                             break;
                         default:
-                            Log.e(TAG, "onConnectionFailed when try to connect with " + endpointId + "\t" + result.getStatus().getStatusMessage() + " " + result.getStatus().toString());
-                            if (callback != null)
-                                callback.onConnectionFailed(findAvailableDeviceById(endpointId), result);
+                            if (debuggable)
+                                Log.e(TAG, "onConnectionFailed when try to connect with " + endpointId + "\t" + result.getStatus().getStatusMessage() + " " + result.getStatus().toString());
+
+                            NBConnector.this.onConnectionFailed(findAvailableDeviceById(endpointId), result);
                     }
                 }
 
@@ -269,7 +363,7 @@ public abstract class NBConnector<NODE extends Node> {
                 public void onDisconnected(String endpointId) {
                     NODE node = removeDevice(endpointId);
                     if (debuggable) Log.d(TAG, "onDisconnected from " + endpointId);
-                    if (callback != null) callback.onDisconnected(node);
+                    NBConnector.this.onDisconnected(node);
                 }
             };
 
@@ -284,21 +378,33 @@ public abstract class NBConnector<NODE extends Node> {
 
                     if (debuggable)
                         Log.d(TAG, "onDeviceFound  " + info.getEndpointName() + " : " + endpointId);
-                    if (callback != null) callback.onDeviceFound(node, info);
+                    NBConnector.this.onDeviceFound(node, info);
                 }
 
                 @Override
                 public void onEndpointLost(String endpointId) {
                     NODE node = removeDevice(endpointId);
                     if (debuggable) Log.d(TAG, "onDeviceLost  " + node);
-                    if (callback != null) callback.onDeviceLost(node);
+                    NBConnector.this.onDeviceLost(node);
                 }
             };
 
-    public void requestConnection(@NonNull String endpointId) {
+    public void requestConnection(@NonNull final String endpointId) {
         try {
-            connection.requestConnection(node.toString(), endpointId, connectionLifecycleCallback);
-            if (debuggable) Log.d(TAG, "requestConnection to : " + endpointId);
+            connection.requestConnection(node.toString(), endpointId, connectionLifecycleCallback)
+                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                        @Override
+                        public void onSuccess(Void aVoid) {
+                            if (debuggable)
+                                Log.d(TAG, "requestConnection => status: success\trequest to " + endpointId);
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            Log.e(TAG, "requestConnection => status: failed\trequest to " + endpointId + "\t" + e.getMessage());
+                        }
+                    });
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -308,10 +414,22 @@ public abstract class NBConnector<NODE extends Node> {
         requestConnection(node.getEndpointId());
     }
 
-    public void acceptConnection(@NonNull String endpointId) {
+    public void acceptConnection(@NonNull final String endpointId) {
         try {
-            connection.acceptConnection(endpointId, payloadCallback);
-            if (debuggable) Log.d(TAG, "acceptConnection request from : " + endpointId);
+            connection.acceptConnection(endpointId, payloadCallback)
+                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                        @Override
+                        public void onSuccess(Void aVoid) {
+                            if (debuggable)
+                                Log.d(TAG, "acceptConnection => status: success\trequest from " + endpointId);
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            Log.e(TAG, "acceptConnection => status: failed\trequest from " + endpointId + " " + e.getMessage());
+                        }
+                    });
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -321,10 +439,24 @@ public abstract class NBConnector<NODE extends Node> {
         acceptConnection(node.getEndpointId());
     }
 
-    public void rejectConnection(@NonNull String endpointId) {
+    public void rejectConnection(@NonNull final String endpointId) {
         try {
-            connection.rejectConnection(endpointId);
-            if (debuggable) Log.d(TAG, "rejectConnection request from : " + endpointId);
+            connection.rejectConnection(endpointId)
+                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                        @Override
+                        public void onSuccess(Void aVoid) {
+                            if (debuggable)
+                                Log.d(TAG, "rejectConnection => status: success\trequest from " + endpointId);
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            if (debuggable)
+                                Log.d(TAG, "rejectConnection => status: failed\trequest from " + endpointId + " " + e.getMessage());
+                        }
+                    });
+//            if (debuggable) Log.d(TAG, "rejectConnection request from : " + endpointId);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -339,41 +471,38 @@ public abstract class NBConnector<NODE extends Node> {
             connection.startAdvertising(
                     node.toString(), serviceId, connectionLifecycleCallback,
                     new AdvertisingOptions.Builder().setStrategy(strategy).build())
-                    .addOnCanceledListener(new OnCanceledListener() {
-                        @Override
-                        public void onCanceled() {
-                            if (debuggable)
-                                Log.d(TAG, "onAdvertiseCanceled name : " + node.toString() + " strategy: " + strategy.toString());
-                            if (callback != null) callback.onAdvertiseCanceled();
-                        }
-                    })
+
                     .addOnSuccessListener(new OnSuccessListener<Void>() {
                         @Override
                         public void onSuccess(Void aVoid) {
                             if (debuggable)
-                                Log.d(TAG, "onAdvertiseSuccess name : " + node.toString() + " strategy: " + strategy.toString());
-                            if (callback != null) callback.onAdvertiseSuccess();
-                        }
-                    })
-                    .addOnCompleteListener(new OnCompleteListener<Void>() {
-                        @Override
-                        public void onComplete(@NonNull Task<Void> task) {
-                            if (debuggable)
-                                Log.d(TAG, "onAdvertiseComplete name : " + node.toString() + " strategy: " + strategy.toString());
-                            if (callback != null) callback.onAdvertiseComplete();
+                                Log.d(TAG, "startAdvertising => status: success\tname : " + node.toString() + " strategy: " + strategy.toString());
+                            NBConnector.this.onAdvertiseSuccess();
                         }
                     })
                     .addOnFailureListener(new OnFailureListener() {
                         @Override
                         public void onFailure(@NonNull Exception e) {
-                            Log.e(TAG, "onAdvertiseFailed name : " + node.toString() + " strategy: " + strategy.toString() + " error: " + e.getMessage());
-                            if (callback != null) callback.onAdvertiseFailed(e);
+                            Log.e(TAG, "startAdvertising => status: failed\tname : " + node.toString() + " strategy: " + strategy.toString() + " error: " + e.getMessage());
+                            NBConnector.this.onAdvertiseFailed(e);
+                        }
+                    })
+                    .addOnCanceledListener(new OnCanceledListener() {
+                        @Override
+                        public void onCanceled() {
+                            if (debuggable)
+                                Log.d(TAG, "startAdvertising => status: canceled\tname : " + node.toString() + " strategy: " + strategy.toString());
+                            NBConnector.this.onAdvertiseCanceled();
                         }
                     });
+//                    .addOnCompleteListener(new OnCompleteListener<Void>() {
+//                        @Override
+//                        public void onComplete(@NonNull Task<Void> task) {
+//                            if (debuggable)
+//                                Log.d(TAG, "startAdvertising => status: complete\tname : " + node.toString() + " strategy: " + strategy.toString());
+//                        }
+//                    });
 
-            if (debuggable)
-                Log.d(TAG, "onStartAdvertising  name: " + node.toString() + " serviceId: " + serviceId + " strategy: " + strategy.toString());
-//            if (callback != null) callback.onStartAdvertising(name, serviceId, strategy);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -382,8 +511,8 @@ public abstract class NBConnector<NODE extends Node> {
     public void stopAdvertising() {
         try {
             connection.stopAdvertising();
-            if (debuggable) Log.d(TAG, "onStopAdvertising");
-            if (callback != null) callback.onStopAdvertising();
+            if (debuggable) Log.d(TAG, "stopAdvertising");
+            NBConnector.this.onStopAdvertising();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -411,45 +540,40 @@ public abstract class NBConnector<NODE extends Node> {
 
     public void startDiscovery(final @NonNull String serviceId, final @NonNull Strategy strategy) {
         try {
-
             connection.startDiscovery(
                     serviceId, endpointDiscoveryCallback,
                     new DiscoveryOptions.Builder().setStrategy(strategy).build())
-                    .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    .addOnSuccessListener(new OnSuccessListener<Void>() {
                         @Override
-                        public void onComplete(@NonNull Task<Void> task) {
+                        public void onSuccess(Void aVoid) {
                             if (debuggable)
-                                Log.d(TAG, "onDiscoveryComplete serviceId : " + serviceId + " strategy: " + strategy.toString());
-                            if (callback != null) callback.onDiscoveryComplete();
+                                Log.d(TAG, "startDiscovery => success\tserviceId : " + serviceId + " strategy: " + strategy.toString());
+                            NBConnector.this.onDiscoverySuccess();
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            if (debuggable)
+                                Log.e(TAG, "startDiscovery => failed\tserviceId : " + serviceId + " strategy: " + strategy.toString() + " error: " + e.getMessage());
+                            NBConnector.this.onDiscoveryFailed(e);
                         }
                     })
                     .addOnCanceledListener(new OnCanceledListener() {
                         @Override
                         public void onCanceled() {
                             if (debuggable)
-                                Log.d(TAG, "onDiscoveryCanceled serviceId : " + serviceId + " strategy: " + strategy.toString());
-                            if (callback != null) callback.onDiscoveryCanceled();
-                        }
-                    })
-                    .addOnSuccessListener(new OnSuccessListener<Void>() {
-                        @Override
-                        public void onSuccess(Void aVoid) {
-                            if (debuggable)
-                                Log.d(TAG, "onDiscoverySuccess serviceId : " + serviceId + " strategy: " + strategy.toString());
-                            if (callback != null) callback.onDiscoverySuccess();
-                        }
-                    })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            Log.e(TAG, "onAdvertiseFailed  strategy: " + strategy.toString() + " error: " + e.getMessage());
-                            if (callback != null) callback.onDiscoveryFailed(e);
+                                Log.d(TAG, "startDiscovery => canceled\tserviceId : " + serviceId + " strategy: " + strategy.toString());
+                            NBConnector.this.onDiscoveryCanceled();
                         }
                     });
-
-            if (debuggable)
-                Log.d(TAG, "onStartDiscovery   serviceId: " + serviceId + " strategy: " + strategy.toString());
-//            if (callback != null) callback.onStartDiscovery(serviceId, strategy);
+//                    .addOnCompleteListener(new OnCompleteListener<Void>() {
+//                        @Override
+//                        public void onComplete(@NonNull Task<Void> task) {
+//                            if (debuggable)
+//                                Log.d(TAG, "startDiscovery => complete\tserviceId : " + serviceId + " strategy: " + strategy.toString());
+//                        }
+//                    });
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -459,37 +583,124 @@ public abstract class NBConnector<NODE extends Node> {
         try {
             connection.stopDiscovery();
             if (debuggable) Log.d(TAG, "onStopDiscovery");
-            if (callback != null) callback.onStopDiscovery();
+            NBConnector.this.onStopDiscovery();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void sendFile(@NonNull NODE node, @NonNull File file) throws Exception {
-        sendFile(node.getEndpointId(), file);
+    public void sendFile(@NonNull final NODE node, @NonNull final File file) throws Exception {
+        final FilePayload payload = new FilePayload(file);
+        Payload namePayload = payload.toMsgFileMeta();
+        final Payload filePayload = payload.toFilePayload();
+
+        connection.sendPayload(node.getEndpointId(), namePayload).addOnSuccessListener(new OnSuccessListener<Void>() {
+            @Override
+            public void onSuccess(Void aVoid) {
+                outgoingPayloads.put(filePayload.getId(), filePayload);
+                connection.sendPayload(node.getEndpointId(), filePayload)
+                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                            @Override
+                            public void onSuccess(Void aVoid) {
+                                if (debuggable)
+                                    Log.d(TAG, "sendFile => request success\t  " + node + " file: " + file.getAbsolutePath());
+                            }
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Log.e(TAG, "sendFile => request failed\t  " + node + " file: " + file.getAbsolutePath() + " error: " + e.getMessage());
+                            }
+                        });
+            }
+        })
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        if (debuggable)
+                            Log.d(TAG, "sendFileMeta => success\t  " + node + " file: " + file.getAbsolutePath());
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.e(TAG, "sendFileMeta => failed\t  " + node + " file: " + file.getAbsolutePath() + " error: " + e.getMessage());
+                    }
+                });
     }
 
 
     public void sendFile(@NonNull final String endpointId, @NonNull File file) throws Exception {
-        FilePayload payload = new FilePayload(file);
-        Payload namePayload = payload.toMsgFileMeta();
-        final Payload filePayload = payload.toFilePayload();
-
-        connection.sendPayload(endpointId, namePayload).addOnSuccessListener(new OnSuccessListener<Void>() {
-            @Override
-            public void onSuccess(Void aVoid) {
-                connection.sendPayload(endpointId, filePayload);
-            }
-        });
-
+        if (!connected.containsKey(endpointId)) {
+            Log.e(TAG, "sendFile => failed\tendpointId " + endpointId + " not found in connected list");
+            return;
+        }
+        sendFile(connected.get(endpointId), file);
     }
 
-    public Task<Void> sendMessage(@NonNull NODE node, @NonNull String message) {
-        return sendMessage(node.getEndpointId(), message);
+    public void sendMessage(@NonNull final NODE node, @NonNull final String message) {
+        connection.sendPayload(node.getEndpointId(), Payload.fromBytes(message.getBytes()))
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        if (debuggable)
+                            Log.d(TAG, "sendMessage => success\t  " + node + " message: " + message);
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.e(TAG, "sendMessage => failed\t  " + node + " message: " + message + " error: " + e.getMessage());
+                    }
+                });
     }
 
-    public Task<Void> sendMessage(@NonNull String endpointId, @NonNull String message) {
-        return connection.sendPayload(endpointId, Payload.fromBytes(message.getBytes()));
+    public void sendMessage(@NonNull String endpointId, @NonNull String message) {
+        if (!connected.containsKey(endpointId)) {
+            Log.e(TAG, "sendMessage => failed\tendpointId " + endpointId + " not found in connected list");
+            return;
+        }
+        sendMessage(connected.get(endpointId), message);
     }
 
+    public void sendMessage(@NonNull final NODE node, @NonNull final Message message) {
+        sendMessage(node.getEndpointId(), message.toString());
+    }
+
+
+    // TODO: 6/17/2019 need to handle this 
+    public void abortFileTransfer(@NonNull final String endpointId, final long payloadId) {
+        final boolean isIncoming = incomingPayloads.containsKey(payloadId);
+        final boolean isOutgoing = outgoingPayloads.containsKey(payloadId);
+
+        if (!isIncoming && !isOutgoing) {
+            Log.e(TAG, "abortFileTransfer => failed\tpayload " + payloadId + " not found in local map");
+            return;
+        }
+
+        if (!connected.containsKey(endpointId)) {
+            Log.e(TAG, "abortFileTransfer => failed\tendpointId " + endpointId + " not found in connected list");
+            return;
+        }
+
+        final String fileName = fileNamePayloads.get(payloadId);
+        final NODE node = connected.get(endpointId);
+
+        connection.cancelPayload(payloadId)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        final Payload remove = isIncoming ? incomingPayloads.remove(payloadId) : outgoingPayloads.remove(payloadId);
+                        fileNamePayloads.remove(payloadId);
+                        if (debuggable)
+                            Log.d(TAG, "abortFileTransfer => success\t  " + node + " fileName: " + fileName);
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.e(TAG, "abortFileTransfer => failed\t  " + node + " fileName: " + fileName + " error: " + e.getMessage());
+                    }
+                });
+    }
 }
