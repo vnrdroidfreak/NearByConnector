@@ -3,6 +3,7 @@ package com.virudhairaj.nearby;
 import android.content.Context;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
 import org.json.JSONObject;
@@ -40,11 +41,11 @@ public class Node {
         this.type = type;
     }
 
-    public Node(@NonNull JSONObject obj) {
-        this(obj.toString());
+    public Node(@NonNull JSONObject obj, @Nullable String endpointId) {
+        this(obj.toString(),endpointId);
     }
 
-    public Node(@NonNull String jsonObjStr){
+    public Node(@NonNull String jsonObjStr, @Nullable String endpointId){
         String id = "", name = "";
         Type type = Type.generic;
         try {
@@ -53,7 +54,7 @@ public class Node {
             name = obj.has("name") ? obj.getString("name") : "";
             type = Type.parse(obj.has("type") ? obj.getString("type") : Type.generic.name());
             if (obj.has("endpointId")) {
-                endpointId = obj.getString("endpointId");
+                this.endpointId = obj.getString("endpointId");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -62,15 +63,18 @@ public class Node {
             this.name = name;
             this.type = type;
         }
+
+        if (TextUtils.isEmpty(this.endpointId)  && !TextUtils.isEmpty(endpointId)){
+            this.endpointId=endpointId;
+        }
     }
 
     public String getEndpointId() {
         return endpointId != null ? endpointId : "";
     }
 
-    public Node setEndpointId(String endpointId) {
+    public void setEndpointId(String endpointId) {
         this.endpointId = endpointId;
-        return this;
     }
 
     public Node setConnected(boolean connected) {

@@ -16,7 +16,7 @@ public abstract class Message {
             t = obj.has("type") ? MsgType.parse(obj.getString("type")) : MsgType.unknown;
             c = obj.has("content") ? obj.getString("content") : json;
         } catch (Exception e) {
-            e.printStackTrace();
+//            e.printStackTrace();
         } finally {
             this.content = c;
             this.type = t;
