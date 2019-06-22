@@ -32,13 +32,13 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
-public class NBConnector<NODE extends Node> {
+public class NBConnector<NODE extends NBNode> {
     public static final String TAG = NBConnector.class.getSimpleName();
     public static boolean debuggable = true;
     private final ConnectionsClient connection;
     private final NODE myNode;
     private NBCallback<NODE> callback;
-    private NodeParser<NODE> nodeParser = null;
+    private NBNodeParser<NODE> nodeParser = null;
     private final NBConnector THIS;
     private final Context context;
 
@@ -151,7 +151,7 @@ public class NBConnector<NODE extends Node> {
         return ContextCompat.checkSelfPermission(context,  Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED;
     }
 
-    public NBConnector(@NonNull final Context context, @NonNull final NODE myNode, @NonNull final NodeParser<NODE> nodeParser, @Nullable final NBCallback<NODE> callback) {
+    public NBConnector(@NonNull final Context context, @NonNull final NODE myNode, @NonNull final NBNodeParser<NODE> nodeParser, @Nullable final NBCallback<NODE> callback) {
         if (context == null) throw new RuntimeException("Context is null");
         if (myNode == null) throw new RuntimeException("myNode is null");
         this.context=context;
@@ -184,7 +184,7 @@ public class NBConnector<NODE extends Node> {
                                 Log.d(TAG, "onIncomingFile: from " + node + " fileName: " + meta.content);
                             if (node != null)
                                 if (callback != null)
-                                    callback.onIncomingFile(THIS, node, payload, meta.content);
+                                    callback.onFileIncoming(THIS, node, payload, meta.content);
                         }
 
                     }

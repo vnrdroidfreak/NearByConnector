@@ -9,7 +9,7 @@ import com.google.android.gms.nearby.connection.Payload;
 
 import java.io.File;
 
-public class NBCallback<NODE extends Node> {
+public class NBCallback<NODE extends NBNode> {
     public void onStopDiscovery(@NonNull NBConnector<NODE> connector) {
     }
 
@@ -58,7 +58,7 @@ public class NBCallback<NODE extends Node> {
     public void onMessageReceived(@NonNull NBConnector<NODE> connector, final @NonNull NODE from, final @NonNull Message message) {
     }
 
-    public void onIncomingFile(@NonNull NBConnector<NODE> connector, final @NonNull NODE node, final @NonNull Payload payload, final String fileName) {
+    public void onFileIncoming(@NonNull NBConnector<NODE> connector, final @NonNull NODE node, final @NonNull Payload payload, final String fileName) {
     }
 
     public void onFileTransfer(@NonNull NBConnector<NODE> connector, final @NonNull NODE node, boolean isIncoming, final @NonNull Payload payload, final String fileName) {

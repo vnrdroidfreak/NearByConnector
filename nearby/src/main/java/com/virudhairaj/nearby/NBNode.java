@@ -8,13 +8,12 @@ import android.text.TextUtils;
 
 import org.json.JSONObject;
 
-public class Node {
-    public final String deviceId;
-    public final String name;
+public class NBNode {
+    private final String deviceId;
+    private final String name;
     private String endpointId;
-    public final Type type;
+    private final Type type;
     private boolean connected;
-
 
     public static enum Type {
         generic, master, slave;
@@ -29,23 +28,23 @@ public class Node {
             }
         }
     }
-    public Node(@NonNull Context context, @NonNull String name, Type type) {
+    public NBNode(@NonNull Context context, @NonNull String name, Type type) {
         deviceId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
         this.name = name;
         this.type = type != null ? type : Type.generic;
     }
 
-    public Node(@NonNull String deviceId, @NonNull String name, Type type) {
+    public NBNode(@NonNull String deviceId, @NonNull String name, Type type) {
         this.deviceId = deviceId;
         this.name = name;
         this.type = type;
     }
 
-    public Node(@NonNull JSONObject obj, @Nullable String endpointId) {
+    public NBNode(@NonNull JSONObject obj, @Nullable String endpointId) {
         this(obj.toString(),endpointId);
     }
 
-    public Node(@NonNull String jsonObjStr, @Nullable String endpointId){
+    public NBNode(@NonNull String jsonObjStr, @Nullable String endpointId){
         String id = "", name = "";
         Type type = Type.generic;
         try {
@@ -69,6 +68,18 @@ public class Node {
         }
     }
 
+    public Type getType() {
+        return type!=null?type:Type.generic;
+    }
+
+    public String getDeviceId() {
+        return deviceId!=null?deviceId:"";
+    }
+
+    public String getName() {
+        return name!=null?name:"";
+    }
+
     public String getEndpointId() {
         return endpointId != null ? endpointId : "";
     }
@@ -77,7 +88,8 @@ public class Node {
         this.endpointId = endpointId;
     }
 
-    public Node setConnected(boolean connected) {
+
+    public NBNode setConnected(boolean connected) {
         this.connected = connected;
         return this;
     }
