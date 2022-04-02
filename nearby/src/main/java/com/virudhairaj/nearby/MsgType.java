@@ -1,6 +1,7 @@
 package com.virudhairaj.nearby;
 
-import android.support.annotation.NonNull;
+
+import androidx.annotation.NonNull;
 
 public enum MsgType {
     unknown, message, fileMeta;

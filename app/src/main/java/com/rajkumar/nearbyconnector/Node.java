@@ -1,12 +1,13 @@
 package com.rajkumar.nearbyconnector;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 
 import com.virudhairaj.nearby.NBNode;
 
 import org.json.JSONObject;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 public class Node extends NBNode{
     public Node(@NonNull Context context, @NonNull String name, Type type) {

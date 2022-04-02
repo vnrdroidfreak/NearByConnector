@@ -3,10 +3,11 @@ package com.virudhairaj.nearby;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.util.SimpleArrayMap;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.collection.SimpleArrayMap;
+import androidx.core.content.ContextCompat;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -121,13 +122,6 @@ public class NBConnector<NODE extends NBNode> {
                     Manifest.permission.CHANGE_WIFI_STATE,
                     Manifest.permission.ACCESS_COARSE_LOCATION,
             };
-
-    private static final String[] STORAGE_PERMISSIONS =
-            new String[]{
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            };
-
 
     private String getRejectedRequiredPermissions(@NonNull Context context) {
         StringBuilder sb = new StringBuilder();

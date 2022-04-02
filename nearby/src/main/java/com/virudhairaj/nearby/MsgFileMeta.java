@@ -1,11 +1,12 @@
 package com.virudhairaj.nearby;
 
-import android.support.annotation.NonNull;
 
 
 
 import java.io.File;
 import java.io.FileNotFoundException;
+
+import androidx.annotation.NonNull;
 
 public class MsgFileMeta extends Message {
 

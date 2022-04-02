@@ -1,6 +1,5 @@
 package com.virudhairaj.nearby;
 
-import android.support.annotation.NonNull;
 
 import com.google.android.gms.nearby.connection.ConnectionInfo;
 import com.google.android.gms.nearby.connection.ConnectionResolution;
@@ -8,6 +7,8 @@ import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo;
 import com.google.android.gms.nearby.connection.Payload;
 
 import java.io.File;
+
+import androidx.annotation.NonNull;
 
 public class NBCallback<NODE extends NBNode> {
     public void onStopDiscovery(@NonNull NBConnector<NODE> connector) {

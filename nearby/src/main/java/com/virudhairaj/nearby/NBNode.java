@@ -2,11 +2,12 @@ package com.virudhairaj.nearby;
 
 import android.content.Context;
 import android.provider.Settings;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
 import org.json.JSONObject;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 public class NBNode {
     private final String deviceId;

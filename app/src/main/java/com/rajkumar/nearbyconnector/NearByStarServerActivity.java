@@ -3,10 +3,6 @@ package com.rajkumar.nearbyconnector;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.View;
 
 import com.google.android.gms.nearby.connection.ConnectionInfo;
@@ -18,6 +14,11 @@ import com.virudhairaj.nearby.NBNode;
 import com.virudhairaj.nearby.NBNodeParser;
 
 import java.util.ArrayList;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 
 public class NearByStarServerActivity extends AppCompatActivity {
