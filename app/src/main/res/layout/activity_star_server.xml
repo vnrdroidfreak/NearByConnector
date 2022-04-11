@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:text="Waiting List" />
 
-        <android.support.v7.widget.RecyclerView
+        <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/waitingRecycler"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -39,7 +39,7 @@
             android:layout_height="wrap_content"
             android:text="Connected List" />
 
-        <android.support.v7.widget.RecyclerView
+        <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/connectedRecycler"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

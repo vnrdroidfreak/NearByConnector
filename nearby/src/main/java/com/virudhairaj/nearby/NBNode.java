@@ -29,6 +29,7 @@ public class NBNode {
             }
         }
     }
+
     public NBNode(@NonNull Context context, @NonNull String name, Type type) {
         deviceId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
         this.name = name;
@@ -113,16 +114,10 @@ public class NBNode {
     }
 
 
+    @NonNull
     @Override
     public String toString() {
         return toJsonObject().toString();
     }
 
-//    public String BitMapToString(Bitmap bitmap){
-//        ByteArrayOutputStream baos=new  ByteArrayOutputStream();
-//        bitmap.compress(Bitmap.CompressFormat.PNG,100, baos);
-//        byte [] b=baos.toByteArray();
-//        String temp= Base64.encodeToString(b, Base64.DEFAULT);
-//        return temp;
-//    }
 }

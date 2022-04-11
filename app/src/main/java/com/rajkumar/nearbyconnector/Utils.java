@@ -36,29 +36,4 @@ public class Utils {
         wifiManager.enableNetwork(netId, true);
         wifiManager.reconnect();
     }
-
-
-//    public static void updateTime(final @NonNull Context context, final String ssid, final String password) {
-//        if (ContextCompat.checkSelfPermission(context, "com.google.android.things.permission.SET_TIME") != PackageManager.PERMISSION_GRANTED) {
-//
-//            Log.e("Permission", "permission missing com.google.android.things.permission.SET_TIME");
-//            return;
-//        }
-//
-//        TimeManager timeManager = TimeManager.getInstance();
-//        // Use 24-hour time
-//        timeManager.setTimeFormat(TimeManager.FORMAT_24);
-//
-//        // Set time zone to Eastern Standard Time
-//        timeManager.setTimeZone("America/New_York");
-//
-//        // Set clock time to noon
-//        Calendar calendar = Calendar.getInstance();
-//        calendar.set(Calendar.MILLISECOND, 0);
-//        calendar.set(Calendar.SECOND, 0);
-//        calendar.set(Calendar.MINUTE, 0);
-//        calendar.set(Calendar.HOUR_OF_DAY, 12);
-//        long timeStamp = calendar.getTimeInMillis();
-//        timeManager.setTime(timeStamp);
-//    }
 }
